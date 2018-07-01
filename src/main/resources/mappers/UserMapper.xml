@@ -162,11 +162,42 @@
       where email=#{email}
     </select>
 
-    <select id="selectLogin" resultType="BaseResultMap" parameterType="java.util.map">
+    <select id="selectLogin" resultMap="BaseResultMap" parameterType="map">
         select
         <include refid="Base_Column_List" />
         FROM  mmall_user
         WHERE username=#{username}
         and password=#{password}
+    </select>
+    <select id="selectQuestionByUsername" resultType="string" parameterType="string">
+      SELECT
+      question
+      FROM mmall_user
+      WHERE username=#{username}
+    </select>
+    <select id="checkAnswer" resultType="int" parameterType="map">
+      SELECT
+      COUNT(1) FROM mmall_user
+      WHERE username=#{username} AND
+      question=#{question} AND
+      answer=#{answer}
+    </select>
+
+    <update id="updatePasswordByUsername"  parameterType="map">
+      UPDATE mmall_user
+      SET password=#{password},update_time=now()
+      WHERE  username=#{username}
+    </update>
+
+    <select id="checkPassword" resultType="int" parameterType="map">
+        SELECT count(1)
+        FROM mmall_user
+        WHERE id=#{userId} AND password=#{password}
+    </select>
+
+    <select id="checkEmailById" resultType="int" parameterType="map">
+        SELECT count(1) FROM mmall_user
+        WHERE email=#{email}
+        and id!=#{userId}
     </select>
  </mapper>
