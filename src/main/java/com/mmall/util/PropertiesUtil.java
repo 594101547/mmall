@@ -9,7 +9,7 @@ import java.io.InputStreamReader;
 import java.util.Properties;
 
 /**
- * Created by geely
+ * Created by dingtao
  */
 public class PropertiesUtil {
 
@@ -17,6 +17,8 @@ public class PropertiesUtil {
 
     private static Properties props;
 
+    //静态代码块
+    //做初始化静态变量，指挥运行一次
     static {
         String fileName = "mmall.properties";
         props = new Properties();
@@ -34,6 +36,7 @@ public class PropertiesUtil {
         }
         return value.trim();
     }
+
 
     public static String getProperty(String key,String defaultValue){
 
