@@ -185,6 +185,7 @@
 
     <update id="updatePasswordByUsername"  parameterType="map">
       UPDATE mmall_user
+
       SET password=#{password},update_time=now()
       WHERE  username=#{username}
     </update>
