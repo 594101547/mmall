@@ -3,6 +3,7 @@ package com.mmall.service.impl;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.google.common.collect.Lists;
+import com.mmall.common.Const;
 import com.mmall.common.ResponseCode;
 import com.mmall.common.ServiceResponse;
 import com.mmall.controller.backend.ProductManageController;
@@ -10,6 +11,7 @@ import com.mmall.dao.CategoryMapper;
 import com.mmall.dao.ProductMapper;
 import com.mmall.pojo.Category;
 import com.mmall.pojo.Product;
+import com.mmall.service.ICategoryService;
 import com.mmall.service.IProductService;
 import com.mmall.util.DataTimeUtil;
 import com.mmall.util.PropertiesUtil;
@@ -18,19 +20,26 @@ import com.mmall.vo.ProductListVO;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTimeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 /*
 create by dingtao
  */
-public class IproductServiceImpl implements IProductService{
+@Service("iProductService")
+public class IProductServiceImpl implements IProductService{
 
     @Autowired
     private ProductMapper productMapper;
     @Autowired
     private CategoryMapper categoryMapper;
+
+    @Autowired
+    private ICategoryService iCategoryService;
+
     public ServiceResponse saveOrUpdateProduct(Product product){
         if(product !=null){
 
@@ -167,5 +176,63 @@ public class IproductServiceImpl implements IProductService{
         PageInfo pageResult = new PageInfo(productList);
         pageResult.setList(productListVOList);
         return ServiceResponse.createBySuccess(pageResult);
+    }
+
+    //前台获取detail
+    public ServiceResponse<ProductDetailVO> getProductDetail(Integer productId){
+        if(productId == null){
+            return ServiceResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(),ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+        }
+        Product product = productMapper.selectByPrimaryKey(productId);
+        if(product == null){
+            return ServiceResponse.createByErrorMessage("产品已下架，或者不存在");
+        }
+        if(product.getStatus() != Const.ProductStatusEnum.ON_SALE.getCode()){
+            return ServiceResponse.createByErrorMessage("产品已下架或者删除");
+        }
+        ProductDetailVO productDetailVO = assmbleProductDetailVO(product);
+        return ServiceResponse.createBySuccess(productDetailVO);
+    }
+
+    public ServiceResponse getProductByKeywordCategory(String keyword,Integer categoryId,int pageNum,int pageSize,String orderBy){
+        if(StringUtils.isBlank(keyword)&&categoryId == null){
+            return ServiceResponse.createByErrorCodeMessage(ResponseCode.ILLEGAL_ARGUMENT.getCode(),ResponseCode.ILLEGAL_ARGUMENT.getDesc());
+        }
+        List<Integer> categoryIdList = new ArrayList<Integer>();
+        if(categoryId != null){
+            Category category = categoryMapper.selectByPrimaryKey(categoryId);
+            if(category == null && StringUtils.isBlank(keyword)){
+                //没有该分类，并且没有关键字，这个时候就返回一个空的结果集,不报错
+                PageHelper.startPage(pageNum,pageSize);
+                List<ProductListVO> productListVOList = Lists.newArrayList();
+                PageInfo pageInfo = new PageInfo(productListVOList);
+                return ServiceResponse.createBySuccess(pageInfo);
+            }
+            categoryIdList =iCategoryService.selectCategoryAndChilerenById(category.getId()).getData();
+        }
+        if(StringUtils.isNotBlank(keyword)){
+            keyword = new StringBuilder().append("%").append(keyword).append("%").toString();
+        }
+        //开始分页
+        PageHelper.startPage(pageNum,pageSize);
+        //排序处理
+        if(StringUtils.isNotBlank(orderBy)){
+            //判断传过来的orderBy是否是price_desc/price_asc里面的一个,否则参数不合法
+            if(Const.ProductListOrderBy.PRICE_ASC_DESC.contains(orderBy)){
+                String[] orderByArray = orderBy.split("_");
+                //这里要注意orderBy的入参应该是"price desc"。这中间有个空格，代表按照price desc排序。
+                PageHelper.orderBy(orderByArray[0]+" "+orderByArray[1]);
+            }
+        }
+        List<Product> productList = productMapper.selectByNameAndCategoryIds(StringUtils.isBlank(keyword)?null:keyword,categoryIdList.size()==0?null:categoryIdList);
+        List<ProductListVO> listVOList = Lists.newArrayList();
+        for(Product product:productList){
+            ProductListVO productListVO = assembleProductListVO(product);
+            listVOList.add(productListVO);
+        }
+        //自动进行分页
+        PageInfo pageInfo = new PageInfo(productList);
+        pageInfo.setList(listVOList);
+        return ServiceResponse.createBySuccess(pageInfo);
     }
 }
