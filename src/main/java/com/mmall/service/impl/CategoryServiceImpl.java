@@ -66,7 +66,7 @@ public class CategoryServiceImpl implements ICategoryService {
     /*
     递归查询本节点和孩子节点的Id
      */
-    public ServiceResponse selectCategoryAndChilerenById(Integer categoryId){
+    public ServiceResponse<List<Integer>> selectCategoryAndChilerenById(Integer categoryId){
         Set<Category> categorySet = Sets.newHashSet();
         findChildCategory(categorySet,categoryId);
 
